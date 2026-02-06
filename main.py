@@ -1,3 +1,4 @@
+#james/main.py
 from core import JamesKernel
 from core.handlers import (
     command_ingress_handler,
