@@ -137,8 +137,7 @@ class JamesKernel:
         if not g3.allowed:
             return
 
-        # NOOP
-        return
+        self.state.running_jobs.append(event.execution_id)
 
     def _transition_execution_finished(
         self, event: ExecutionFinished
@@ -173,13 +172,23 @@ class JamesKernel:
         - Execution transitions are defined
         - but not yet activated
         - all transitions are disabled (NOOP)
-
-        Therefore:
-        - Always block state mutation
         """
-        # Future activation example:
-        # if isinstance(event, ExecutionStarted):
-        #     return self.state.feature_level >= 2
+        
+        if isinstance(event, ExecutionStarted):
+            if self.state.feature_level >= 2:
+                return GuardResult(allowed=True)
+            return GuardResult(
+                allowed=False,
+                reason="feature_level_blocked"
+            )
+
+        if isinstance(event, ExecutionFinished):
+            if self.state.feature_level >= 2:
+                return GuardResult(allowed=True)
+            return GuardResult(
+                allowed=False,
+                reason="feature_level_blocked"
+            )
 
         return GuardResult(
             allowed=False,
