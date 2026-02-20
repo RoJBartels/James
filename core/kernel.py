@@ -8,9 +8,27 @@ from .events import (
 )
 from command import Command
 
+#-------------------------------------------------------------------
+# GuardResult Class as a simple wrapper for guard outcomes
+#-------------------------------------------------------------------
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass(frozen=True)
+class GuardResult:
+    allowed: bool
+    reason: Optional[str] = None
+    
+#-------------------------------------------------------------------
+# Type Aliases for Handlers
+#-------------------------------------------------------------------
+
 CommandHandler = Callable[[Command, KernelState], None]
 EventHandler = Callable[[Event, KernelState], None]
 
+#-------------------------------------------------------------------
+# JamesKernel Class Definition
+#-------------------------------------------------------------------
 
 class JamesKernel:
     def __init__(self, initial_state: KernelState | None = None):
@@ -84,15 +102,18 @@ class JamesKernel:
         self, event: ExecutionRequested
     ) -> None:
         # G1: Feature-Level Guard
-        if not self._guard_feature_level(event):
+        g1 = self._guard_feature_level(event)
+        if not g1.allowed:
             return
 
         # G2: State-Consistency Guard
-        if not self._guard_state_consistency(event):
+        g2 = self._guard_state_consistency(event)
+        if not g2.allowed:
             return
 
         # G3: Invariant Guard
-        if not self._guard_invariants(event):
+        g3 = self._guard_invariants(event)
+        if not g3.allowed:
             return
 
         # Transition (NOOP in Feature-Level 1)
@@ -101,13 +122,19 @@ class JamesKernel:
     def _transition_execution_started(
         self, event: ExecutionStarted
     ) -> None:
-        if not self._guard_feature_level(event):
+        # G1: Feature-Level Guard
+        g1 = self._guard_feature_level(event)
+        if not g1.allowed:
             return
 
-        if not self._guard_state_consistency(event):
+        # G2: State-Consistency Guard
+        g2 = self._guard_state_consistency(event)
+        if not g2.allowed:
             return
 
-        if not self._guard_invariants(event):
+        # G3: Invariant Guard
+        g3 = self._guard_invariants(event)
+        if not g3.allowed:
             return
 
         # NOOP
@@ -116,29 +143,36 @@ class JamesKernel:
     def _transition_execution_finished(
         self, event: ExecutionFinished
     ) -> None:
-        if not self._guard_feature_level(event):
+        # G1: Feature-Level Guard
+        g1 = self._guard_feature_level(event)
+        if not g1.allowed:
             return
 
-        if not self._guard_state_consistency(event):
+        # G2: State-Consistency Guard
+        g2 = self._guard_state_consistency(event)
+        if not g2.allowed:
             return
 
-        if not self._guard_invariants(event):
+        # G3: Invariant Guard
+        g3 = self._guard_invariants(event)
+        if not g3.allowed:
             return
 
         # NOOP
         return
 
-       # ------------------------------------------------------------------
-    # Guards (Defensive Layer – A2 Semantics)
+    # ------------------------------------------------------------------
+    # Guards (Defensive Layer – Semantics + Structured for Future Activation)
     # ------------------------------------------------------------------
 
-    def _guard_feature_level(self, event: Event) -> bool:
+    def _guard_feature_level(self, event: Event) -> GuardResult:
         """
         G1 – Feature-Level Guard
 
         In Feature-Level 1:
         - Execution transitions are defined
         - but not yet activated
+        - all transitions are disabled (NOOP)
 
         Therefore:
         - Always block state mutation
@@ -147,10 +181,13 @@ class JamesKernel:
         # if isinstance(event, ExecutionStarted):
         #     return self.state.feature_level >= 2
 
-        return False  # FL1: transitions disabled
+        return GuardResult(
+            allowed=False,
+            reason="feature_level_blocked"
+        )
 
 
-    def _guard_state_consistency(self, event: Event) -> bool:
+    def _guard_state_consistency(self, event: Event) -> GuardResult:
         """
         G2 – State-Consistency Guard
 
@@ -161,22 +198,35 @@ class JamesKernel:
         # ExecutionStarted:
         # execution_id must not already be running
         if isinstance(event, ExecutionStarted):
-            return event.execution_id not in self.state.running_jobs
+            if event.execution_id in self.state.running_jobs:
+                return GuardResult(
+                    allowed=False,
+                    reason="execution_already_running"
+                )
+            return GuardResult(allowed=True)
 
         # ExecutionFinished:
         # execution_id must currently be running
         if isinstance(event, ExecutionFinished):
-            return event.execution_id in self.state.running_jobs
+            if event.execution_id not in self.state.running_jobs:
+                return GuardResult(
+                    allowed=False,
+                    reason="execution_not_running"
+                )
+            return GuardResult(allowed=True)
 
         # ExecutionRequested:
         # no state relation in FL1
         if isinstance(event, ExecutionRequested):
-            return True
+            return GuardResult(allowed=True)
 
-        return True
+        return GuardResult(
+            allowed=False,
+            reason="unsupported_event_for_transition"
+        )
 
 
-    def _guard_invariants(self, event: Event) -> bool:
+    def _guard_invariants(self, event: Event) -> GuardResult:
         """
         G3 – Invariant Guard
 
@@ -186,10 +236,13 @@ class JamesKernel:
         # Invariant example:
         # running_jobs must not contain duplicates
         if len(self.state.running_jobs) != len(set(self.state.running_jobs)):
-            return False
+            return GuardResult(
+                allowed=False,
+                reason="duplicate_running_jobs_detected"
+            )
 
         # No additional invariants defined yet
-        return True
+        return GuardResult(allowed=True)
 
     # ------------------------------------------------------------------
     # Introspection
