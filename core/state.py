@@ -7,13 +7,15 @@ from typing import Optional, List
 class KernelState:
     """
     Explicit, mutable system state.
-    May only be modified by Event-Handlers.
+
+    May only be modified by the Kernel
+    as part of validated Kernel-Transitions.
     """
 
     active_project: Optional[str] = None
     active_task: Optional[str] = None
 
-    feature_level: int = 0
+    feature_level: int = 1
     autonomy_level: int = 0
 
     permissions: List[str] = field(default_factory=list)
