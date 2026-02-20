@@ -78,3 +78,13 @@ def test_running_jobs_order_is_append_order():
     )
 
     assert kernel.state.running_jobs == ["execA", "execB"]
+    
+def test_execution_finished_without_start_blocked_fl2():
+    kernel = JamesKernel()
+    kernel.state.feature_level = 2
+
+    kernel.handle_event(
+        ExecutionFinished("exec1", datetime.now(), success=True)
+    )
+
+    assert kernel.state.running_jobs == []

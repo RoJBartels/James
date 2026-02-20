@@ -137,6 +137,7 @@ class JamesKernel:
         if not g3.allowed:
             return
 
+        # --- FL2 mutation ---
         self.state.running_jobs.append(event.execution_id)
 
     def _transition_execution_finished(
@@ -157,8 +158,8 @@ class JamesKernel:
         if not g3.allowed:
             return
 
-        # NOOP
-        return
+        # --- FL2 mutation ---
+        self.state.running_jobs.remove(event.execution_id)
 
     # ------------------------------------------------------------------
     # Guards (Defensive Layer – Semantics + Structured for Future Activation)

@@ -83,3 +83,40 @@ def test_interleaved_execution_events_fl1():
 
     # No mutation allowed in FL1
     assert kernel.state.running_jobs == []
+    
+    
+def test_execution_lifecycle_fl2():
+    kernel = JamesKernel()
+    kernel.state.feature_level = 2
+
+    kernel.handle_event(
+        ExecutionStarted("exec1", datetime.now())
+    )
+
+    assert kernel.state.running_jobs == ["exec1"]
+
+    kernel.handle_event(
+        ExecutionFinished("exec1", datetime.now(), success=True)
+    )
+
+    assert kernel.state.running_jobs == []
+    
+def test_parallel_execution_lifecycle_fl2():
+    kernel = JamesKernel()
+    kernel.state.feature_level = 2
+
+    kernel.handle_event(
+        ExecutionStarted("execA", datetime.now())
+    )
+
+    kernel.handle_event(
+        ExecutionStarted("execB", datetime.now())
+    )
+
+    assert set(kernel.state.running_jobs) == {"execA", "execB"}
+
+    kernel.handle_event(
+        ExecutionFinished("execA", datetime.now(), success=True)
+    )
+
+    assert kernel.state.running_jobs == ["execB"]
