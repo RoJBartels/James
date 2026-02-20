@@ -128,38 +128,68 @@ class JamesKernel:
         # NOOP
         return
 
-    # ------------------------------------------------------------------
-    # Guards (Defensive Layer)
+       # ------------------------------------------------------------------
+    # Guards (Defensive Layer – A2 Semantics)
     # ------------------------------------------------------------------
 
     def _guard_feature_level(self, event: Event) -> bool:
         """
         G1 – Feature-Level Guard
 
-        Returns True if this event is allowed to cause
-        state mutation in the current feature level.
+        In Feature-Level 1:
+        - Execution transitions are defined
+        - but not yet activated
+
+        Therefore:
+        - Always block state mutation
         """
-        # Feature-Level 1: no transitions are active
-        return False
+        # Future activation example:
+        # if isinstance(event, ExecutionStarted):
+        #     return self.state.feature_level >= 2
+
+        return False  # FL1: transitions disabled
+
 
     def _guard_state_consistency(self, event: Event) -> bool:
         """
         G2 – State-Consistency Guard
 
-        Ensures the event is logically compatible
-        with the current kernel state.
+        Ensures event logically fits current state.
+        No mutation allowed, but logical validity is checked.
         """
-        # No state changes allowed yet
-        return False
+
+        # ExecutionStarted:
+        # execution_id must not already be running
+        if isinstance(event, ExecutionStarted):
+            return event.execution_id not in self.state.running_jobs
+
+        # ExecutionFinished:
+        # execution_id must currently be running
+        if isinstance(event, ExecutionFinished):
+            return event.execution_id in self.state.running_jobs
+
+        # ExecutionRequested:
+        # no state relation in FL1
+        if isinstance(event, ExecutionRequested):
+            return True
+
+        return True
+
 
     def _guard_invariants(self, event: Event) -> bool:
         """
         G3 – Invariant Guard
 
-        Prevents violation of hard kernel invariants.
+        Protects hard system invariants.
         """
-        # No invariants evaluated in FL1
-        return False
+
+        # Invariant example:
+        # running_jobs must not contain duplicates
+        if len(self.state.running_jobs) != len(set(self.state.running_jobs)):
+            return False
+
+        # No additional invariants defined yet
+        return True
 
     # ------------------------------------------------------------------
     # Introspection
