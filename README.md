@@ -64,7 +64,7 @@ This results in a system that is:
 ---
 
 ## Architecture (High-Level)
-
+```
 User (CLI / later Voice)
         │
         ▼
@@ -93,7 +93,7 @@ Executor  ──► Tools (Python, Shell, Web, Home)
 │
 ▼
 Critic (Validation & risk assessment)
-
+```
 
 ---
 
@@ -177,7 +177,7 @@ See:
 ---
 
 ## Project Structure
-
+```
 james/
 ├─ core/          # Kernel, Router, Planner, Executor, Critic
 ├─ llm/           # LLM abstraction + backends
@@ -187,7 +187,7 @@ james/
 ├─ registry/      # Capability & backend selection
 ├─ tests/         # Architecture & behavior tests
 └─ ui/            # CLI, later Voice
-
+```
 
 ---
 
